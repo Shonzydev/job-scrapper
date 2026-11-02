@@ -4,3 +4,6 @@ __pycache__/
 venv/
 .env
 *.db
+
+# ejercicios de practica
+prueba*.py
