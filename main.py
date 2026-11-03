@@ -21,15 +21,26 @@ class BaseProvider:
 
     def parse(self,item):
         raise NotImplementedError
-    
+
+            
 class RemotiveProvider(BaseProvider):
     name = "Remotive"
     url = "https://remotive.com/api/remote-jobs"
-    items_key = "jobs"
+    items_key =  "jobs"
 
     def parse(self, item):
-        return super().parse(item)
-    
+        return Job(
+            title= item.get("title") or "Not specified",
+            company= item.get("company_name") or "Not specified",
+            url= item.get("url") or "Not specified",
+            source= self.name,  
+            location= item.get("candidate_required_location") or "Not specified",
+            salary = item.get("salary") or "Not specified",
+            remote= True
+            )
+
+
+
 
 class TheMuseProvider:
     def __init__(self):
@@ -61,13 +72,7 @@ class TheMuseProvider:
 
 
 if __name__ == "__main__":
-    providers = [RemotiveProvider(), TheMuseProvider()]
-
-    all_jobs = []
-
-    for provider in providers:
-        found = provider.fetch()
-        print(provider.name, len(found))
-        all_jobs += found
-    
-print(all_jobs)
+    p = RemotiveProvider()
+    jobs = p.fetch()
+    print(len(jobs))     # entre 10 y 12
+    print(jobs[0])
