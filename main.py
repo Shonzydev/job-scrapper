@@ -22,7 +22,7 @@ class BaseProvider:
     def parse(self,item):
         raise NotImplementedError
 
-            
+
 class RemotiveProvider(BaseProvider):
     name = "Remotive"
     url = "https://remotive.com/api/remote-jobs"
@@ -42,37 +42,32 @@ class RemotiveProvider(BaseProvider):
 
 
 
-class TheMuseProvider:
-    def __init__(self):
-        self.url =  "https://www.themuse.com/api/public/jobs?page=1&level=Internship"
-        self.name = "The Muse"
+class TheMuseProvider(BaseProvider):
+    name = "TheMuse"
+    url = "https://www.themuse.com/api/public/jobs?page=1&level=Internship"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    items_key =  "results"
 
-    def fetch(self):
-        jobs = []
-        response = requests.get(self.url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        if response.status_code != 200:
-            return jobs
-        data = response.json()
-        for item in data["results"]:
-            names = []
-            for loc in item.get("locations") or []:
-                names.append(loc.get("name"))
-            location = ", ".join(names) or "Not specified"
-            job = Job(
-                title= item.get("name") or "Not specified",
-                company= (item.get("company") or {}).get("name") or "Not specified",
-                url= (item.get("refs") or {}).get("landing_page") or "Not specified",
-                source= self.name,
-                location= location,
-                salary= "Not specified",
-                remote = False
-            )
-            jobs.append(job)
-        return jobs
-
+    def parse(self,item):
+        names = []
+        for loc in item.get("locations") or []:
+            names.append(loc.get("name"))
+        return Job(
+            title= item.get("name") or "Not specified",
+            company= (item.get("company") or {}).get("name") or "Not specified",
+            url= (item.get("refs") or {}).get("landing_page") or "Not specified",
+            source= self.name,
+            location = ", ".join(names) or "Not specified",
+            salary= "Not specified",
+            remote = False)
 
 if __name__ == "__main__":
-    p = RemotiveProvider()
-    jobs = p.fetch()
-    print(len(jobs))     # entre 10 y 12
-    print(jobs[0])
+    providers = [RemotiveProvider(), TheMuseProvider()]
+    all_jobs = []
+    for provider in providers:
+        found = provider.fetch()
+        print(provider.name, len(found))
+        all_jobs += found
+    print(len(all_jobs))
+
+
