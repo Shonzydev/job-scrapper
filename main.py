@@ -60,11 +60,11 @@ class TheMuseProvider(BaseProvider):
             remote = False)
 
 
-def filter_jobs(jobs,keyword):
+def filter_jobs(jobs,keywords):
     result = []
     for job in jobs:
         # print(repr(keyword), "|", repr(job.title)) (method code depurations)
-        if keyword.lower() in job.title.lower():
+        if any(kw.lower() in job.title.lower() for kw in keywords):
             result.append(job)
     return result
 
@@ -76,7 +76,8 @@ if __name__ == "__main__":
     for provider in providers:
         all_jobs += provider.fetch()
 
-    resultado = filter_jobs(all_jobs, "intern")
+
+    resultado =  filter_jobs(all_jobs, ["intern","trainee"])
 
     print(f"Total: {len(all_jobs)} | Coinciden: {len(resultado)}")
 
