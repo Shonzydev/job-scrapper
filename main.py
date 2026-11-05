@@ -1,7 +1,6 @@
 import requests
 from models import Job
 
-
 class BaseProvider:
     name = ""
     url = ""
@@ -41,7 +40,6 @@ class RemotiveProvider(BaseProvider):
 
 
 
-
 class TheMuseProvider(BaseProvider):
     name = "TheMuse"
     url = "https://www.themuse.com/api/public/jobs?page=1&level=Internship"
@@ -61,13 +59,29 @@ class TheMuseProvider(BaseProvider):
             salary= "Not specified",
             remote = False)
 
+
+def filter_jobs(jobs,keyword):
+    result = []
+    for job in jobs:
+        # print(repr(keyword), "|", repr(job.title)) (method code depurations)
+        if keyword.lower() in job.title.lower():
+            result.append(job)
+    return result
+
 if __name__ == "__main__":
+    
     providers = [RemotiveProvider(), TheMuseProvider()]
+
     all_jobs = []
     for provider in providers:
-        found = provider.fetch()
-        print(provider.name, len(found))
-        all_jobs += found
-    print(len(all_jobs))
+        all_jobs += provider.fetch()
 
+    resultado = filter_jobs(all_jobs, "intern")
 
+    print(f"Total: {len(all_jobs)} | Coinciden: {len(resultado)}")
+
+    if resultado:
+        for job in resultado:
+            print(f"{job.title} | {job.company} | {job.location}")
+    else:
+        print("Sin resultados")
