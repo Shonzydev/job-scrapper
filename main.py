@@ -2,6 +2,7 @@ import requests
 from models import Job
 
 class BaseProvider:
+    pages = 1
     name = ""
     url = ""
     headers = {}
@@ -9,13 +10,32 @@ class BaseProvider:
 
     def fetch(self):
         jobs = []
-        response =  requests.get(self.url, headers = self.headers,timeout=10)
+        for page in range(1, self.pages + 1):
+            page_url = self.url.format(page=page)
+            try : 
+                response =  requests.get(page_url, headers = self.headers,timeout=10)
+            except requests.exceptions.RequestException as e:
+                print(f"Error in {self.name} - {page}", e)
+                break
+            if response.status_code != 200:
+                print(response.status_code)
+                break
+            try:
+                data = response.json()
+            except requests.exceptions.RequestException as e:
+                print(f"Error in {self.name}",e)
+                break
+            try:
+                items = data[self.items_key]
+            except KeyError as e:
+                print(f"Error in {self.name}: key doesnt exist {e}")
+                break
 
-        if response.status_code != 200:
-            return jobs
-        data = response.json()
-        for item in data[self.items_key]:
-            jobs.append(self.parse(item))
+            for item in items:
+                try:
+                    jobs.append(self.parse(item))
+                except  (KeyError, TypeError, AttributeError, ValueError) as e:
+                    print(f"Error in {self.name}: item ommited ({type(e).__name__}: {e})")
         return jobs
 
     def parse(self,item):
@@ -41,10 +61,12 @@ class RemotiveProvider(BaseProvider):
 
 
 class TheMuseProvider(BaseProvider):
+
     name = "TheMuse"
-    url = "https://www.themuse.com/api/public/jobs?page=1&level=Internship"
+    url = "https://www.themuse.com/api/public/jobs?page={page}&level=Internship"
     headers = {"User-Agent": "Mozilla/5.0"}
     items_key =  "results"
+    pages = 3
 
     def parse(self,item):
         names = []
@@ -60,6 +82,25 @@ class TheMuseProvider(BaseProvider):
             remote = False)
 
 
+class ArbeitnowProvider(BaseProvider):
+    name = "Arbeitnow" 
+    url = "https://www.arbeitnow.com/api/job-board-api?page={page}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    items_key = "data"
+    pages = 2
+
+    def parse(self,item):
+        return Job(
+            title= item.get("title") or "Not specified",
+            company= item.get("company_name") or "Not specified",
+            url= item.get("url") or "Not specified",
+            source= self.name,
+            location= item.get("location"),
+            remote= item.get("remote", False)
+
+        )
+
+
 def filter_jobs(jobs,keywords):
     result = []
     for job in jobs:
@@ -70,12 +111,16 @@ def filter_jobs(jobs,keywords):
 
 if __name__ == "__main__":
     
-    providers = [RemotiveProvider(), TheMuseProvider()]
+    providers = [RemotiveProvider(), TheMuseProvider(), ArbeitnowProvider()]
 
     all_jobs = []
+    
     for provider in providers:
-        all_jobs += provider.fetch()
-
+        try:
+            all_jobs += provider.fetch()
+        except Exception as e:
+            print(f"error in {provider.name}",type(e).__name__)
+            
 
     resultado =  filter_jobs(all_jobs, ["intern","trainee"])
 
