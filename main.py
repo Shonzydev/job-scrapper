@@ -1,3 +1,4 @@
+import re
 import requests
 from models import Job
 
@@ -95,17 +96,37 @@ class ArbeitnowProvider(BaseProvider):
             company= item.get("company_name") or "Not specified",
             url= item.get("url") or "Not specified",
             source= self.name,
-            location= item.get("location"),
-            remote= item.get("remote", False)
+            location= item.get("location") or "Not specified" ,
+            remote= item.get("remote", False)   
 
         )
 
+def remove_duplicates(jobs):
+    seen = set()
+    result = []
 
-def filter_jobs(jobs,keywords):
+    for job in jobs:
+        fingerprint = (job.title.lower(), job.company.lower(), job.location.lower())
+
+        if fingerprint in seen:
+            continue
+        else:
+            seen.add(fingerprint)
+            result.append(job)
+
+    return result
+
+
+def matches_keyword(text, keyword):
+
+    pattern = r"(?<!\w)" + re.escape(keyword) + r"(?!\w)"
+    return re.search(pattern, text, re.IGNORECASE) is not None
+
+
+def filter_jobs(jobs, keywords):
     result = []
     for job in jobs:
-        # print(repr(keyword), "|", repr(job.title)) (method code depurations)
-        if any(kw.lower() in job.title.lower() for kw in keywords):
+        if any(matches_keyword(job.title, kw) for kw in keywords):
             result.append(job)
     return result
 
@@ -121,13 +142,13 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"error in {provider.name}",type(e).__name__)
             
-
-    resultado =  filter_jobs(all_jobs, ["intern","trainee"])
+    all_jobs = remove_duplicates(all_jobs)
+    resultado =  filter_jobs(all_jobs, ["AI", "IA"])
 
     print(f"Total: {len(all_jobs)} | Coinciden: {len(resultado)}")
 
     if resultado:
         for job in resultado:
-            print(f"{job.title} | {job.company} | {job.location}")
+            print(f"{job.title} | {job.company} | {job.location} | {job.url}")
     else:
         print("Sin resultados")
